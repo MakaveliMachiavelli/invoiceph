@@ -62,6 +62,11 @@
         </label>
       </div>
 
+      <div class="fields two">
+        <label>Business logo (optional) <input type="file" id="logoInput" accept="image/*"></label>
+        <label>BIR ATP / PTU no. (optional) <input id="sAtp" placeholder="ATP-000-1234567"></label>
+      </div>
+
       <h2>2. Client details (buyer)</h2>
       <div class="fields">
         <label>Client <span class="pro-float">
@@ -85,6 +90,25 @@
             <option>Triplicate</option>
           </select>
         </label>
+      </div>
+
+      <div class="fields three">
+        <label>Currency
+          <select id="invCur">
+            <option value="PHP">₱ PHP</option><option value="USD">$ USD</option>
+            <option value="EUR">€ EUR</option><option value="GBP">£ GBP</option>
+            <option value="SGD">S$ SGD</option><option value="AUD">A$ AUD</option>
+          </select>
+        </label>
+        <label>Withholding tax (2307)
+          <select id="cwtRate">
+            <option value="0">None</option>
+            <option value="2">2% — services (BIR 2307)</option>
+            <option value="1">1% — goods (BIR 2307)</option>
+            <option value="5">5% — gov't / other</option>
+          </select>
+        </label>
+        <label>Discount (₱ or %) <input id="invDiscount" placeholder="e.g. 500 or 10%"></label>
       </div>
 
       <div class="items-head">
@@ -112,6 +136,7 @@
       <h2 class="preview-title">Live preview</h2>
       <div id="doc" class="invoice-doc">
         <div class="inv-style" id="invStyle">INVOICE</div>
+        <div id="logoHolder" class="inv-logo-holder hidden"></div>
         <div class="inv-parties">
           <div>
             <div class="from-label">FROM</div>
@@ -141,7 +166,10 @@
         <div class="inv-totals">
           <div id="p_subtotalRow"><span>Subtotal</span><span id="p_subtotal">₱0.00</span></div>
           <div id="p_vatRow"><span id="p_vatLabel">VAT (12%)</span><span id="p_vat">₱0.00</span></div>
+          <div id="p_discRow" style="display:none"><span>Discount</span><span id="p_disc">−₱0.00</span></div>
           <div class="grand"><span>TOTAL</span><span id="p_total">₱0.00</span></div>
+          <div id="p_cwtRow" style="display:none"><span id="p_cwtLabel">Less: CWT 2% (2307)</span><span id="p_cwt">−₱0.00</span></div>
+          <div id="p_netRow" class="grand" style="display:none"><span>NET AMOUNT PAYABLE</span><span id="p_net">₱0.00</span></div>
           <div class="inv-words" id="p_words"></div>
         </div>
         <div class="inv-notes" id="p_notes"></div>

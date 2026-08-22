@@ -17,7 +17,7 @@ let pro = localStorage.getItem(LS.pro) === '1';
 
 const $ = (id) => document.getElementById(id);
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-const peso = (n) => '₱' + (Math.round(n * 100) / 100).toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+const peso = (n) => (calc._sym || '₱') + (Math.round(n * 100) / 100).toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 const todayISO = () => new Date().toISOString().slice(0, 10);
 
 /* amount in words: 1234.56 → "One Thousand Two Hundred Thirty-Four & 56/100 Only" */
@@ -47,14 +47,29 @@ function pesoToWords(amount) {
 }
 
 /* ============ computations ============ */
+const CUR = { PHP: '₱', USD: '$', EUR: '€', GBP: '£', SGD: 'S$', AUD: 'A$' };
 function calc() {
   const mode = $('vatMode').value;
+  const cur = $('invCur') ? $('invCur').value : 'PHP';
   const gross = items.reduce((s, it) => s + (Number(it.qty) || 0) * (Number(it.price) || 0), 0);
-  let sub = gross, vat = 0, total = gross, vatLabel = '';
-  if (mode === 'vat-excl') { vat = gross * 0.12; sub = gross; total = gross + vat; vatLabel = 'VAT (12%)'; }
-  else if (mode === 'vat-incl') { total = gross; sub = gross / 1.12; vat = gross - sub; vatLabel = 'VAT (12%, incl.)'; }
-  else { sub = gross; vat = 0; total = gross; vatLabel = ''; }
-  return { mode, sub, vat, total, vatLabel };
+
+  // discount: "500" fixed or "10%" percent
+  let discVal = 0;
+  const di = ($('invDiscount') ? $('invDiscount').value : '').trim();
+  if (di.endsWith('%')) discVal = gross * ((parseFloat(di) || 0) / 100);
+  else discVal = Number(di) || 0;
+  const g = Math.max(0, gross - discVal);
+
+  let sub = g, vat = 0, total = g, vatLabel = '';
+  if (mode === 'vat-excl') { vat = g * 0.12; sub = g; total = g + vat; vatLabel = 'VAT (12%)'; }
+  else if (mode === 'vat-incl') { total = g; sub = g / 1.12; vat = g - sub; vatLabel = 'VAT (12%, incl.)'; }
+  else { sub = g; vat = 0; total = g; vatLabel = ''; }
+
+  // Creditable Withholding Tax (BIR 2307): withheld on the net of VAT
+  const cwtPct = Number(($('cwtRate') ? $('cwtRate').value : 0)) || 0;
+  const cwt = sub * (cwtPct / 100);
+  const netPayable = total - cwt;
+  return { mode, cur, sym: CUR[cur] || '₱', gross, discVal, sub, vat, total, vatLabel, cwtPct, cwt, netPayable };
 }
 
 /* ============ items editor ============ */
@@ -110,15 +125,27 @@ function render() {
       tb.appendChild(tr);
     });
   }
+  calc._sym = c.sym; // currency symbol for peso() until next calc
   $('p_subtotal').textContent = peso(c.sub);
   const vatRow = $('p_vatRow');
   if (c.mode === 'nonvat') { vatRow.style.display = 'none'; }
   else { vatRow.style.display = 'flex'; $('p_vatLabel').textContent = c.vatLabel; $('p_vat').textContent = peso(c.vat); }
   $('p_total').textContent = peso(c.total);
+  const discRow = $('p_discRow');
+  if (discRow) {
+    if (c.discVal > 0) { discRow.style.display = 'flex'; $('p_disc').textContent = '−' + peso(c.discVal); }
+    else discRow.style.display = 'none';
+  }
+  const cwtRowEl = $('p_cwtRow');
+  if (cwtRowEl) {
+    if (c.cwtPct > 0) { cwtRowEl.style.display = 'flex'; $('p_cwtLabel').textContent = 'Less: CWT ' + c.cwtPct + '% (2307)'; $('p_cwt').textContent = '−' + peso(c.cwt); $('p_netRow').style.display = 'flex'; $('p_net').textContent = peso(c.netPayable); }
+    else { cwtRowEl.style.display = 'none'; $('p_netRow').style.display = 'none'; }
+  }
   $('p_words').textContent = '***' + pesoToWords(c.total) + '***';
   $('p_notes').textContent = $('notes').value || '';
   $('p_terms').textContent = $('terms').value || '';
-  $('p_footer').textContent = ($('invCopy').value || 'Original') + ' copy — ' +
+  const atp = $('sAtp') ? $('sAtp').value.trim() : '';
+  $('p_footer').textContent = (atp ? 'ATP/PTU No.: ' + atp + ' · ' : '') + ($('invCopy').value || 'Original') + ' copy — ' +
     (c.mode === 'nonvat'
       ? 'NON-VAT taxpayer, per EOPT Act / RR 11-2024. Any applicable percentage tax is already included in the price.'
       : 'VAT-registered, per EOPT Act / RR 11-2024.');
@@ -128,7 +155,7 @@ function render() {
 /* ============ draft persistence ============ */
 function gatherDraft() {
   return {
-    s: [$('sName').value, $('sTin').value, $('sAddr').value, $('vatMode').value],
+    s: [$('sName').value, $('sTin').value, $('sAddr').value, $('vatMode').value, $('sAtp') ? $('sAtp').value : ''],
     b: [$('bName').value, $('bTin').value, $('bAddr').value],
     inv: [$('invNo').value, $('invDate').value, $('invDue').value, $('invCopy').value],
     nt: [$('notes').value, $('terms').value],
@@ -140,7 +167,7 @@ function loadDraft() {
   try {
     const d = JSON.parse(localStorage.getItem(LS.draft) || 'null');
     if (!d) return false;
-    [$('sName'), $('sTin'), $('sAddr'), $('vatMode')].forEach((el, i) => el.value = d.s[i] ?? el.value);
+    [$('sName'), $('sTin'), $('sAddr'), $('vatMode'), $('sAtp')].forEach((el, i) => { if (el) el.value = d.s[i] ?? el.value; });
     [$('bName'), $('bTin'), $('bAddr')].forEach((el, i) => el.value = d.b[i] ?? '');
     [$('invNo'), $('invDate'), $('invDue'), $('invCopy')].forEach((el, i) => el.value = d.inv[i] ?? '');
     [$('notes'), $('terms')].forEach((el, i) => el.value = d.nt[i] ?? '');
@@ -163,10 +190,13 @@ function logToBook() {
   if (!pro) return;
   const c = calc();
   const book = getBook();
-  book.push({
-    date: $('invDate').value || todayISO(), no: $('invNo').value || String(book.length + 1).padStart(6, '0'),
+  const no = $('invNo').value || String(book.length + 1).padStart(6, '0');
+  const entry = {
+    date: $('invDate').value || todayISO(), no,
     client: $('bName').value, tin: $('bTin').value, sub: c.sub, vat: c.vat, total: c.total
-  });
+  };
+  const ix = book.findIndex(r => r.no === no);
+  if (ix >= 0) book[ix] = entry; else book.push(entry); // reprint updates, never duplicates
   localStorage.setItem(LS.book, JSON.stringify(book));
 }
 function nextNumber() {
@@ -208,19 +238,27 @@ function renderClients() {
   const list = getClients();
   $('clientList').innerHTML = list.length
     ? list.map((c, i) => `<li><div><strong>${esc(c.name)}</strong><br><small>${esc(c.tin || 'no TIN')} · ${esc(c.addr || '')}</small></div>` +
-        `<button data-ci="${i}">Load</button></li>`).join('')
+        `<span><button class="btn-tiny" data-del-ci="${i}" title="Delete client">🗑</button> <button data-ci="${i}">Load</button></span></li>`).join('')
     : '<li style="color:#667085">No saved clients yet. Fill the client fields and press 💾 save.</li>';
 }
 
 /* ============ wire-up ============ */
+function setLogo(data) {
+  const holder = $('logoHolder');
+  if (!holder) return;
+  if (data) { holder.innerHTML = '<img src="' + data + '" alt="logo" class="inv-logo">'; holder.classList.remove('hidden'); }
+  else { holder.innerHTML = ''; holder.classList.add('hidden'); }
+}
+
 document.addEventListener('DOMContentLoaded', () => {
+  try { const lg = localStorage.getItem('iph_logo'); if (lg) setLogo(lg); } catch (e) {}
   const restored = loadDraft();
   if (!$('invDate').value) $('invDate').value = todayISO();
   if (!$('invNo').value) $('invNo').value = pro ? nextNumber() : '000001';  renderItems();
   applyPro();
 
   // generic field -> preview
-  ['sName','sTin','sAddr','vatMode','bName','bTin','bAddr','invNo','invDate','invDue','invCopy','notes','terms']
+  ['sName','sTin','sAddr','vatMode','bName','bTin','bAddr','invNo','invDate','invDue','invCopy','notes','terms','invCur','invDiscount','cwtRate','sAtp']
     .forEach(id => $(id).addEventListener('input', render));
   $('invCopy').addEventListener('change', render);
 
@@ -239,6 +277,31 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // print + log
   $('printBtn').addEventListener('click', () => { logToBook(); window.print(); });
+
+  // logo upload (compressed, stored locally)
+  const logoInput = $('logoInput');
+  if (logoInput) logoInput.addEventListener('change', e => {
+    const f = e.target.files[0]; if (!f) return;
+    const img = new Image();
+    const url = URL.createObjectURL(f);
+    img.onload = () => {
+      const MAX = 300;
+      let { width, height } = img;
+      const k = Math.min(1, MAX / Math.max(width, height));
+      width = Math.round(width * k); height = Math.round(height * k);
+      const cv = document.createElement('canvas');
+      cv.width = width; cv.height = height;
+      cv.getContext('2d').drawImage(img, 0, 0, width, height);
+      URL.revokeObjectURL(url);
+      try {
+        const data = cv.toDataURL('image/png');
+        localStorage.setItem('iph_logo', data);
+        setLogo(data);
+      } catch (err) { alert('Could not store logo (file too large?).'); }
+    };
+    img.onerror = () => URL.revokeObjectURL(url);
+    img.src = url;
+  });
 
   // new invoice (keeps seller identity)
   $('newBtn').addEventListener('click', () => {
@@ -281,6 +344,11 @@ document.addEventListener('DOMContentLoaded', () => {
   $('loadClientBtn').addEventListener('click', () => { renderClients(); $('clientModal').classList.remove('hidden'); });
   $('clientClose').addEventListener('click', () => $('clientModal').classList.add('hidden'));
   $('clientList').addEventListener('click', e => {
+    const del = e.target.closest('button[data-del-ci]');
+    if (del) {
+      const clients = getClients(); clients.splice(+del.dataset.delCi, 1);
+      localStorage.setItem(LS.clients, JSON.stringify(clients)); renderClients(); return;
+    }
     const btn = e.target.closest('button[data-ci]'); if (!btn) return;
     const c = getClients()[+btn.dataset.ci];
     if (c) { $('bName').value = c.name; $('bTin').value = c.tin || ''; $('bAddr').value = c.addr || ''; render(); $('clientModal').classList.add('hidden'); }
