@@ -78,6 +78,13 @@
         <label>Invoice No. <input id="invNo" placeholder="000001"></label>
         <label>Date <input id="invDate" type="date"></label>
         <label>Due date <input id="invDue" type="date"></label>
+        <label>Copy label
+          <select id="invCopy">
+            <option>Original</option>
+            <option>Duplicate</option>
+            <option>Triplicate</option>
+          </select>
+        </label>
       </div>
 
       <div class="items-head">
@@ -135,9 +142,14 @@
           <div id="p_subtotalRow"><span>Subtotal</span><span id="p_subtotal">₱0.00</span></div>
           <div id="p_vatRow"><span id="p_vatLabel">VAT (12%)</span><span id="p_vat">₱0.00</span></div>
           <div class="grand"><span>TOTAL</span><span id="p_total">₱0.00</span></div>
+          <div class="inv-words" id="p_words"></div>
         </div>
         <div class="inv-notes" id="p_notes"></div>
         <div class="inv-terms" id="p_terms"></div>
+        <div class="inv-sign">
+          <div>Received by:<br><br>_________________________</div>
+          <div>Signature over printed name<br><br>_________________________</div>
+        </div>
         <div class="inv-footer" id="p_footer">Non-VAT — per EOPT Act / RR 11-2024. Original for the client.</div>
       </div>
     </section>

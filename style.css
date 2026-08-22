@@ -82,6 +82,8 @@ input:focus,select:focus{outline:2px solid #b8d0ff;border-color:var(--blue)}
 .grand{border-top:2px solid var(--ink);font-weight:900;font-size:1rem;margin-top:.2rem;padding-top:.35rem!important}
 .inv-notes{margin-top:.9rem;font-size:.78rem}
 .inv-terms{font-size:.72rem;color:var(--muted);margin-top:.3rem}
+.inv-words{font-size:.72rem;color:var(--muted);font-style:italic;margin-top:.4rem;text-align:left;font-weight:600}
+.inv-sign{display:flex;justify-content:space-between;margin-top:1.4rem;font-size:.72rem;gap:2rem}
 .inv-footer{margin-top:1rem;border-top:1px solid var(--line);padding-top:.5rem;font-size:.66rem;color:var(--muted);text-align:center}
 
 /* marketing */

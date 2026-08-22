@@ -20,6 +20,32 @@ const esc = (s) => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&
 const peso = (n) => '₱' + (Math.round(n * 100) / 100).toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 const todayISO = () => new Date().toISOString().slice(0, 10);
 
+/* amount in words: 1234.56 → "One Thousand Two Hundred Thirty-Four & 56/100 Only" */
+const ONES = ['','One','Two','Three','Four','Five','Six','Seven','Eight','Nine','Ten','Eleven','Twelve','Thirteen','Fourteen','Fifteen','Sixteen','Seventeen','Eighteen','Nineteen'];
+const TENS = ['','','Twenty','Thirty','Forty','Fifty','Sixty','Seventy','Eighty','Ninety'];
+function words999(n) {
+  let s = '';
+  if (n >= 100) { s += ONES[Math.floor(n / 100)] + ' Hundred'; n %= 100; if (n) s += ' '; }
+  if (n >= 20) { s += TENS[Math.floor(n / 10)]; n %= 10; if (n) s += '-' + ONES[n]; }
+  else if (n > 0) s += ONES[n];
+  return s;
+}
+function pesoToWords(amount) {
+  const neg = amount < 0; amount = Math.abs(amount);
+  let whole = Math.floor(amount);
+  const cents = Math.round((amount - whole) * 100);
+  if (cents === 100) { whole += 1; }
+  if (whole === 0) return 'Zero Pesos & 0/100 Only';
+  const parts = [];
+  const scales = [[1e9, 'Billion'], [1e6, 'Million'], [1e3, 'Thousand']];
+  let rest = whole;
+  for (const [scale, name] of scales) {
+    if (rest >= scale) { parts.push(words999(Math.floor(rest / scale)) + ' ' + name); rest %= scale; }
+  }
+  if (rest > 0) parts.push(words999(rest));
+  return (neg ? 'Negative ' : '') + parts.join(' ') + ` Pesos & ${cents === 100 ? 0 : cents}/100 Only`;
+}
+
 /* ============ computations ============ */
 function calc() {
   const mode = $('vatMode').value;
@@ -89,11 +115,13 @@ function render() {
   if (c.mode === 'nonvat') { vatRow.style.display = 'none'; }
   else { vatRow.style.display = 'flex'; $('p_vatLabel').textContent = c.vatLabel; $('p_vat').textContent = peso(c.vat); }
   $('p_total').textContent = peso(c.total);
+  $('p_words').textContent = '***' + pesoToWords(c.total) + '***';
   $('p_notes').textContent = $('notes').value || '';
   $('p_terms').textContent = $('terms').value || '';
-  $('p_footer').textContent = c.mode === 'nonvat'
-    ? 'NON-VAT taxpayer — per EOPT Act / RR 11-2024. Any applicable percentage tax is already included in the price. Original for the client.'
-    : 'VAT-registered — per EOPT Act / RR 11-2024. Original for the client.';
+  $('p_footer').textContent = ($('invCopy').value || 'Original') + ' copy — ' +
+    (c.mode === 'nonvat'
+      ? 'NON-VAT taxpayer, per EOPT Act / RR 11-2024. Any applicable percentage tax is already included in the price.'
+      : 'VAT-registered, per EOPT Act / RR 11-2024.');
   saveDraft();
 }
 
@@ -102,7 +130,7 @@ function gatherDraft() {
   return {
     s: [$('sName').value, $('sTin').value, $('sAddr').value, $('vatMode').value],
     b: [$('bName').value, $('bTin').value, $('bAddr').value],
-    inv: [$('invNo').value, $('invDate').value, $('invDue').value],
+    inv: [$('invNo').value, $('invDate').value, $('invDue').value, $('invCopy').value],
     nt: [$('notes').value, $('terms').value],
     items
   };
@@ -114,7 +142,7 @@ function loadDraft() {
     if (!d) return false;
     [$('sName'), $('sTin'), $('sAddr'), $('vatMode')].forEach((el, i) => el.value = d.s[i] ?? el.value);
     [$('bName'), $('bTin'), $('bAddr')].forEach((el, i) => el.value = d.b[i] ?? '');
-    [$('invNo'), $('invDate'), $('invDue')].forEach((el, i) => el.value = d.inv[i] ?? '');
+    [$('invNo'), $('invDate'), $('invDue'), $('invCopy')].forEach((el, i) => el.value = d.inv[i] ?? '');
     [$('notes'), $('terms')].forEach((el, i) => el.value = d.nt[i] ?? '');
     if (Array.isArray(d.items) && d.items.length) items = d.items;
     return true;
@@ -192,8 +220,9 @@ document.addEventListener('DOMContentLoaded', () => {
   applyPro();
 
   // generic field -> preview
-  ['sName','sTin','sAddr','vatMode','bName','bTin','bAddr','invNo','invDate','invDue','notes','terms']
+  ['sName','sTin','sAddr','vatMode','bName','bTin','bAddr','invNo','invDate','invDue','invCopy','notes','terms']
     .forEach(id => $(id).addEventListener('input', render));
+  $('invCopy').addEventListener('change', render);
 
   // items events (delegated)
   $('items').addEventListener('input', e => {
