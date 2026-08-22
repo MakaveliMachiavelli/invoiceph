@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Free BIR-Compliant Invoice Generator for Philippine Freelancers (EOPT 2024) — InvoicePH</title>
+<meta name="description" content="Create BIR-compliant invoices in 2 minutes. Free invoice generator for Filipino freelancers and small businesses — VAT & NON-VAT layouts under the EOPT Act (RR 11-2024). Print or save as PDF. No signup.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='12' fill='%230b5fff'/%3E%3Ctext x='32' y='44' font-size='34' text-anchor='middle' fill='white' font-family='Arial' font-weight='bold'%3E₱%3C/text%3E%3C/svg%3E">
+<link rel="stylesheet" href="style.css">
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  "mainEntity": [
+    {"@type":"Question","name":"Do Philippine freelancers need to issue invoices now?","acceptedAnswer":{"@type":"Answer","text":"Yes. Under the Ease of Paying Taxes Act and BIR RR 11-2024 (effective April 27, 2024), freelancers and self-employed professionals issue INVOICES for services instead of Official Receipts."}},
+    {"@type":"Question","name":"What must a BIR-compliant invoice contain?","acceptedAnswer":{"@type":"Answer","text":"Your name, TIN and business address, the buyer's name/TIN/address, a serial number and date, quantity, unit, description and unit price per line, and the VAT or NON-VAT designation. VAT-registered sellers must show the 12% VAT amount."}},
+    {"@type":"Question","name":"Is this invoice generator free?","acceptedAnswer":{"@type":"Answer","text":"Yes. Creating, printing and saving invoices as PDF is free forever. InvoicePH PRO (one-time ₱199) adds a saved client directory, automatic invoice numbering, a BIR-style sales book and CSV export."}}
+  ]
+}
+</script>
+</head>
+<body>
+
+<header class="site-header">
+  <div class="brand">Invoice<span>PH</span></div>
+  <nav>
+    <span id="proBadge" class="badge pro-badge hidden">PRO</span>
+    <a href="#faq">FAQ</a>
+    <button id="proBtn" class="btn-link">Get PRO — ₱199</button>
+  </nav>
+</header>
+
+<main class="wrap">
+
+  <section class="hero">
+    <h1>Free BIR-Compliant Invoice Generator</h1>
+    <p class="sub">For Filipino freelancers &amp; small businesses. Built for the <strong>EOPT Act (RR 11-2024)</strong> rules — invoices, not official receipts. VAT &amp; NON-VAT layouts. Print or save as PDF. No signup, data stays in your browser.</p>
+    <div class="hero-chips">
+      <span>✓ EOPT / RR 11-2024 layout</span>
+      <span>✓ VAT 12% &amp; NON-VAT modes</span>
+      <span>✓ Works offline</span>
+      <span>✓ 100% private — no server</span>
+    </div>
+  </section>
+
+  <div class="app-grid">
+
+    <!-- ============ EDITOR ============ -->
+    <section class="panel editor">
+
+      <h2>1. Your details (seller)</h2>
+      <div class="fields">
+        <label>Registered name <input id="sName" placeholder="Juan D. Dela Cruz"></label>
+        <label>TIN <input id="sTin" placeholder="123-456-789-000"></label>
+        <label>Business address <input id="sAddr" placeholder="Unit 5B, 123 Rizal Ave., Manila"></label>
+        <label>Tax classification
+          <select id="vatMode">
+            <option value="nonvat">Non-VAT / VAT-exempt (most freelancers, 8% or below ₱3M)</option>
+            <option value="vat-excl">VAT-registered — prices EXCLUDE VAT</option>
+            <option value="vat-incl">VAT-registered — prices INCLUDE VAT</option>
+          </select>
+        </label>
+      </div>
+
+      <h2>2. Client details (buyer)</h2>
+      <div class="fields">
+        <label>Client <span class="pro-float">
+            <button class="btn-tiny hidden" id="loadClientBtn" title="PRO: load saved client">📁 load</button>
+            <button class="btn-tiny hidden" id="saveClientBtn" title="PRO: save client to directory">💾 save</button>
+          </span>
+          <input id="bName" placeholder="Acme Corp. / Ms. Maria Santos"></label>
+        <label>TIN (optional for non-VAT buyers) <input id="bTin" placeholder="000-000-000-000"></label>
+        <label>Address <input id="bAddr" placeholder="456 Ayala Ave., Makati City"></label>
+      </div>
+
+      <h2>3. Invoice</h2>
+      <div class="fields three">
+        <label>Invoice No. <input id="invNo" placeholder="000001"></label>
+        <label>Date <input id="invDate" type="date"></label>
+        <label>Due date <input id="invDue" type="date"></label>
+      </div>
+
+      <div class="items-head">
+        <h2>4. Line items</h2>
+        <button id="addItem" class="btn-small">+ Add item</button>
+      </div>
+      <div id="items"></div>
+
+      <h2>5. Notes &amp; terms</h2>
+      <div class="fields">
+        <label>Notes (shows on invoice) <input id="notes" placeholder="Payment via GCash 0917-XXX-XXXX. Thank you!"></label>
+        <label>Terms <input id="terms" placeholder="Payment due within 15 days."></label>
+      </div>
+
+      <div class="actions">
+        <button id="printBtn" class="btn primary">🖨️ Print / Save as PDF</button>
+        <button id="newBtn" class="btn">✨ New invoice</button>
+        <button id="salesbookBtn" class="btn hidden">📒 Sales book (PRO)</button>
+      </div>
+      <p class="hint">Your draft auto-saves in this browser. Nothing is uploaded anywhere.</p>
+    </section>
+
+    <!-- ============ PREVIEW ============ -->
+    <section class="panel preview-pane">
+      <h2 class="preview-title">Live preview</h2>
+      <div id="doc" class="invoice-doc">
+        <div class="inv-style" id="invStyle">INVOICE</div>
+        <div class="inv-parties">
+          <div>
+            <div class="from-label">FROM</div>
+            <div class="party-name" id="p_sName">Juan D. Dela Cruz</div>
+            <div class="party-meta" id="p_sTin">TIN: 123-456-789-000</div>
+            <div class="party-meta" id="p_sAddr">Unit 5B, 123 Rizal Ave., Manila</div>
+            <div class="party-meta" id="p_sVat">NON-VAT</div>
+          </div>
+          <div class="inv-meta">
+            <div id="p_invNo">No. 000001</div>
+            <div id="p_invDate">Date: —</div>
+            <div id="p_invDue">Due: —</div>
+          </div>
+          <div>
+            <div class="from-label">BILL TO</div>
+            <div class="party-name" id="p_bName">Acme Corp.</div>
+            <div class="party-meta" id="p_bTin">TIN: —</div>
+            <div class="party-meta" id="p_bAddr">—</div>
+          </div>
+        </div>
+        <table class="inv-table">
+          <thead>
+            <tr><th>Qty</th><th>Unit</th><th>Description</th><th class="r">Unit Price</th><th class="r">Amount</th></tr>
+          </thead>
+          <tbody id="p_items"></tbody>
+        </table>
+        <div class="inv-totals">
+          <div id="p_subtotalRow"><span>Subtotal</span><span id="p_subtotal">₱0.00</span></div>
+          <div id="p_vatRow"><span id="p_vatLabel">VAT (12%)</span><span id="p_vat">₱0.00</span></div>
+          <div class="grand"><span>TOTAL</span><span id="p_total">₱0.00</span></div>
+        </div>
+        <div class="inv-notes" id="p_notes"></div>
+        <div class="inv-terms" id="p_terms"></div>
+        <div class="inv-footer" id="p_footer">Non-VAT — per EOPT Act / RR 11-2024. Original for the client.</div>
+      </div>
+    </section>
+  </div>
+
+  <!-- ============ WHY / PERSONA / FAQ ============ -->
+  <section class="marketing">
+    <h2>Why freelancers use InvoicePH</h2>
+    <div class="cards">
+      <div class="card"><h3>📜 EOPT-ready</h3><p>Since April 27, 2024 (RR 11-2024), official receipts are OUT and invoices are IN for services. This generator follows the new layout rules — serial number, TINs, VAT designation, per-line details.</p></div>
+      <div class="card"><h3>🔒 100% private</h3><p>Everything runs in your browser. No signup, no server, your client list never leaves your device. Print to PDF and you're done in 2 minutes.</p></div>
+      <div class="card"><h3>🇵🇭 Built for PH</h3><p>₱ formatting, VAT-inclusive/exclusive pricing modes, NON-VAT and percentage-tax notations, GCash-friendly payment terms. Made for how Filipino freelancers actually bill.</p></div>
+    </div>
+
+    <h2 id="faq">FAQ</h2>
+    <div class="faq-item"><h3>Do I need to issue invoices now instead of official receipts?</h3><p>Yes — under the Ease of Paying Taxes Act and BIR RR 11-2024 (effective April 27, 2024), all sellers of goods <em>and services</em>, including freelancers, issue invoices. Official receipts are phased out for this purpose.</p></div>
+    <div class="faq-item"><h3>What must the invoice contain to be BIR-compliant?</h3><p>Name, TIN and business address of seller; buyer's name, TIN and address; serial number and date of issue; quantity, unit of measure, description and unit price per line; and your VAT status — VAT-registered sellers show the 12% VAT, non-VAT sellers print "NON-VAT". (Formal BIR registration of your invoice series with the RDO still applies — this tool produces the document itself.)</p></div>
+    <div class="faq-item"><h3>I'm a freelancer earning under ₱3M — which mode do I pick?</h3><p>Most likely <strong>Non-VAT / VAT-exempt</strong>. If you're VAT-registered, pick one of the VAT modes depending on whether your quoted prices already include 12% VAT.</p></div>
+    <div class="faq-item"><h3>Is my data uploaded?</h3><p>No. There is no backend. Everything stays in your browser's local storage. You can clear it anytime with "New invoice".</p></div>
+
+    <div class="cta-box">
+      <h2>InvoicePH PRO — ₱199 one-time</h2>
+      <ul>
+        <li>📁 <strong>Saved client directory</strong> — load repeat clients in one click</li>
+        <li>🔢 <strong>Automatic invoice numbering</strong> — never reuse a number</li>
+        <li>📒 <strong>Sales book</strong> — every invoice auto-logged, BIR-style, exportable to CSV for your books of accounts</li>
+      </ul>
+      <p class="once">One-time payment. Not a subscription. Pay via GCash, get your code instantly.</p>
+      <button id="proBtn2" class="btn primary big">Unlock PRO — ₱199</button>
+    </div>
+  </section>
+</main>
+
+<footer class="site-footer">
+  <p>InvoicePH — free BIR-compliant invoice generator for Philippine freelancers. Not affiliated with the BIR. Verify requirements with your RDO.</p>
+</footer>
+
+<!-- ============ PAY MODAL ============ -->
+<div id="payModal" class="modal hidden">
+  <div class="modal-card">
+    <button class="modal-x" id="payClose">✕</button>
+    <h2>Unlock InvoicePH PRO</h2>
+    <p class="price">₱199 <span>one-time · lifetime · no subscription</span></p>
+    <div class="qr-box">
+      <img src="assets/gcash-qr.svg" alt="GCash QR (replace with merchant QR)" width="180" height="180">
+      <ol class="pay-steps">
+        <li>Scan the GCash QR and send <strong>₱199</strong>.</li>
+        <li>Take note of the reference number.</li>
+        <li>Enter the unlock code sent to you below.</li>
+      </ol>
+    </div>
+    <div class="code-row">
+      <input id="codeInput" placeholder="Enter unlock code">
+      <button id="codeBtn" class="btn primary">Unlock</button>
+    </div>
+    <p class="code-msg" id="codeMsg"></p>
+  </div>
+</div>
+
+<!-- ============ SALES BOOK MODAL ============ -->
+<div id="bookModal" class="modal hidden">
+  <div class="modal-card wide">
+    <button class="modal-x" id="bookClose">✕</button>
+    <h2>📒 Sales Book</h2>
+    <p class="hint">Invoices are logged when you press <em>Print / Save as PDF</em>. This mirrors the BIR sales/book of accounts format.</p>
+    <table class="book-table"><thead><tr><th>Date</th><th>Inv No.</th><th>Client</th><th>TIN</th><th class="r">Amount</th><th class="r">VAT</th><th class="r">Total</th></tr></thead><tbody id="bookBody"></tbody></table>
+    <div class="actions">
+      <button id="exportCsv" class="btn primary">⬇️ Export CSV</button>
+      <button id="clearBook" class="btn danger">Clear book</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============ CLIENT PICKER MODAL ============ -->
+<div id="clientModal" class="modal hidden">
+  <div class="modal-card">
+    <button class="modal-x" id="clientClose">✕</button>
+    <h2>📁 Saved clients</h2>
+    <ul id="clientList" class="client-list"></ul>
+  </div>
+</div>
+
+<script src="app.js"></script>
+</body>
+</html>
