@@ -192,7 +192,7 @@
             <button class="btn-tiny hidden" id="loadClientBtn" title="PRO: load saved client">📁 load</button>
             <button class="btn-tiny hidden" id="saveClientBtn" title="PRO: save client to directory">💾 save</button>
           </span>
-          <input id="bName" placeholder="Acme Corp. / Ms. Maria Santos"></label>
+          <input id="bName" aria-label="Buyer name" placeholder="Acme Corp. / Ms. Maria Santos"></label>
         <label>TIN (optional for non-VAT buyers) <input id="bTin" placeholder="000-000-000-000"></label>
         <label>Address <input id="bAddr" placeholder="456 Ayala Ave., Makati City"></label>
       </div>
@@ -349,7 +349,7 @@
       </ol>
     </div>
     <div class="code-row">
-      <input id="codeInput" placeholder="Enter unlock code">
+      <input id="codeInput" type="text" aria-label="PRO unlock code" placeholder="Enter unlock code">
       <button id="codeBtn" class="btn primary">Unlock</button>
     </div>
     <p class="code-msg" id="codeMsg"></p>
