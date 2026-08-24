@@ -4,7 +4,7 @@
 /* ============ config ============ */
 /* PRO unlock codes. OWNER: change these to your own codes before promoting
    (see PAYMENTS.md). A code is simply given to the buyer after GCash payment. */
-const PRO_CODES = ['INVOICEPH-PRO-199', 'IPH-DEMO'];
+const PRO_CODES = ['IPH-PRO-199-787C-8512', 'IPH-PRO-199-DEMO-88A8-4474'];
 const PRICE_PESOS = 199;
 
 const LS = {
